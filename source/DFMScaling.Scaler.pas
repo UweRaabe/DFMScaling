@@ -40,8 +40,21 @@ begin
 end;
 
 type
+  TEventHandler = class
+  private
+    FEventHandler: TStringList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Clear;
+    procedure FindMethod(Reader: TReader; const MethodName: string; var Address: Pointer; var Error: Boolean);
+    procedure FindMethodName(Writer: TWriter; AMethod: TMethod; var MethodName: string);
+  end;
+
+type
   TDfmScaler = class
   private
+    FEventHandler: TEventHandler;
     FInstance: TComponent;
     FLines: TStrings;
   protected
@@ -52,6 +65,7 @@ type
     procedure LoadInstance;
     function Scale: Boolean; virtual; abstract;
     procedure StoreInstance;
+    property EventHandler: TEventHandler read FEventHandler;
     property Instance: TComponent read FInstance;
     property Lines: TStrings read FLines write FLines;
   end;
@@ -95,10 +109,12 @@ constructor TDfmScaler.Create;
 begin
   inherited;
   FInstance := CreateInstance;
+  FEventHandler := TEventHandler.Create();
 end;
 
 destructor TDfmScaler.Destroy;
 begin
+  FEventHandler.Free;
   FInstance.Free;
   inherited Destroy;
 end;
@@ -116,7 +132,13 @@ begin
       text.Free;
     end;
     stream.Position := 0;
-    stream.ReadComponent(Instance);
+    var Reader := TReader.Create(stream, 4096);
+    try
+      Reader.OnFindMethod := EventHandler.FindMethod;
+      Reader.ReadRootComponent(Instance);
+    finally
+      Reader.Free;
+    end;
   finally
     stream.Free;
   end;
@@ -126,7 +148,13 @@ procedure TDfmScaler.StoreInstance;
 begin
   var stream := TMemoryStream.Create;
   try
-    stream.WriteComponent(instance);
+    var Writer := TWriter.Create(stream, 4096);
+    try
+      Writer.OnFindMethodName := EventHandler.FindMethodName;
+      Writer.WriteDescendent(Instance, nil);
+    finally
+      Writer.Free;
+    end;
     stream.Position := 0;
     var text := TStringStream.Create;
     try
@@ -135,7 +163,7 @@ begin
       var firstLine := Lines[0];
       Lines.LoadFromStream(text);
       Lines[0] := firstLine;
-  finally
+    finally
       text.Free;
     end;
   finally
@@ -236,6 +264,43 @@ begin
   finally
     scaler.Free;
   end;
+end;
+
+constructor TEventHandler.Create;
+begin
+  inherited Create;
+  FEventHandler := TStringList.Create;
+end;
+
+destructor TEventHandler.Destroy;
+begin
+  FEventHandler.Free;
+  inherited Destroy;
+end;
+
+procedure TEventHandler.Clear;
+begin
+  FEventHandler.Clear;
+end;
+
+procedure TEventHandler.FindMethod(Reader: TReader; const MethodName: string; var Address: Pointer; var Error: Boolean);
+var
+  idx: Integer;
+begin
+  idx := FEventHandler.IndexOf(MethodName);
+  if idx < 0 then
+    idx := FEventHandler.Add(MethodName);
+  Address := Pointer(idx + 1); // to avoid nil
+  Error := False;
+end;
+
+procedure TEventHandler.FindMethodName(Writer: TWriter; AMethod: TMethod; var MethodName: string);
+var
+  idx: Integer;
+begin
+  idx := Integer(AMethod.Code) - 1;
+  if (idx >= 0) and (idx < FEventHandler.Count) then
+    MethodName := FEventHandler[idx];
 end;
 
 end.
