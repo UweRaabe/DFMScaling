@@ -78,8 +78,15 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="designide.dcp"/>
-        <DCCReference Include="DFMScaling.Main.pas"/>
-        <DCCReference Include="DFMScaling.Scaler.pas"/>
+        <DCCReference Include="..\..\source\DFMScaling.Main.pas"/>
+        <DCCReference Include="..\..\source\DFMScaling.Scaler.pas"/>
+        <DCCReference Include="..\..\source\DFMScaling.Images.pas">
+            <Form>dmImages</Form>
+            <FormType>dfm</FormType>
+            <DesignClass>TDataModule</DesignClass>
+        </DCCReference>
+        <DCCReference Include="..\..\source\DFMScaling.Tools.pas"/>
+        <DCCReference Include="..\..\source\DFMScaling.Consts.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -12,12 +12,15 @@ type
     FInstance: TMagician;
   private
     FPackageNotifierID: Integer;
+    FPluginInfoID: Integer;
+    function GetOTAAboutBoxServices: IOTAAboutBoxServices;
     function GetOTAServices: IOTAServices;
   public
     constructor Create;
     destructor Destroy; override;
     class procedure CreateInstance;
     class procedure DestroyInstance;
+    property OTAAboutBoxServices: IOTAAboutBoxServices read GetOTAAboutBoxServices;
     property OTAServices: IOTAServices read GetOTAServices;
   end;
 
@@ -27,7 +30,16 @@ implementation
 
 uses
   System.IOUtils, System.Classes, System.SysUtils,
-  DFMScaling.Scaler;
+  DFMScaling.Scaler, DFMScaling.Images, DFMScaling.Tools;
+
+const
+  cIconName = 'DFMScaling';
+  cTitle = 'DFM Scaling Magician';
+  cVersion = 'V1.0.0';
+  cCopyright = 'Copyright© 2023 by Uwe Raabe';
+
+resourcestring
+  SDescription = 'Automates some tasks with projects.';
 
 type
   TFormModuleNotifier = class(TNotifierObject, IOTANotifier, IOTAModuleNotifier)
@@ -89,14 +101,22 @@ type
 constructor TMagician.Create;
 begin
   inherited;
+  dmImages := TdmImages.Create(nil);
+  SplashScreenServices.AddPluginBitmap(TTools.Title, dmImages.ImageArray[cIconName]);
+  FPluginInfoID := OTAAboutBoxServices.AddPluginInfo(TTools.Title, TTools.Description, dmImages.ImageArray[cIconName]);
   FPackageNotifierID := OTAServices.AddNotifier(TMagicianNotifier.Create);
 end;
 
 destructor TMagician.Destroy;
 begin
+  if FPluginInfoID > 0 then begin
+    OTAAboutBoxServices.RemovePluginInfo(FPluginInfoID);
+  end;
   if FPackageNotifierID > 0 then begin
     OTAServices.RemoveNotifier(FPackageNotifierID);
   end;
+  dmImages.Free;
+  dmImages := nil;
   inherited;
 end;
 
@@ -108,6 +128,11 @@ end;
 class procedure TMagician.DestroyInstance;
 begin
   FInstance.Free;
+end;
+
+function TMagician.GetOTAAboutBoxServices: IOTAAboutBoxServices;
+begin
+  BorlandIDEServices.GetService(IOTAAboutBoxServices, Result);
 end;
 
 function TMagician.GetOTAServices: IOTAServices;

@@ -34,7 +34,10 @@ requires
   designide;
 
 contains
-  DFMScaling.Main in 'DFMScaling.Main.pas',
-  DFMScaling.Scaler in 'DFMScaling.Scaler.pas';
+  DFMScaling.Main in '..\..\source\DFMScaling.Main.pas',
+  DFMScaling.Scaler in '..\..\source\DFMScaling.Scaler.pas',
+  DFMScaling.Images in '..\..\source\DFMScaling.Images.pas' {dmImages: TDataModule},
+  DFMScaling.Tools in '..\..\source\DFMScaling.Tools.pas',
+  DFMScaling.Consts in '..\..\source\DFMScaling.Consts.pas';
 
 end.
