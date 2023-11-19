@@ -48,6 +48,7 @@ type
     destructor Destroy; override;
     procedure Clear;
     procedure FindMethod(Reader: TReader; const MethodName: string; var Address: Pointer; var Error: Boolean);
+    procedure FindMethodInstance(Reader: TReader; const MethodName: string; var AMethod: TMethod; var Error: Boolean);
     procedure FindMethodName(Writer: TWriter; AMethod: TMethod; var MethodName: string);
   end;
 
@@ -134,7 +135,7 @@ begin
     stream.Position := 0;
     var Reader := TReader.Create(stream, 4096);
     try
-      Reader.OnFindMethod := EventHandler.FindMethod;
+      Reader.OnFindMethodInstance := EventHandler.FindMethodInstance;
       Reader.ReadRootComponent(Instance);
     finally
       Reader.Free;
@@ -292,6 +293,12 @@ begin
     idx := FEventHandler.Add(MethodName);
   Address := Pointer(idx + 1); // to avoid nil
   Error := False;
+end;
+
+procedure TEventHandler.FindMethodInstance(Reader: TReader; const MethodName: string; var AMethod: TMethod; var Error: Boolean);
+begin
+  AMethod.Data := nil;
+  FindMethod(Reader, MethodName, AMethod.Code, Error);
 end;
 
 procedure TEventHandler.FindMethodName(Writer: TWriter; AMethod: TMethod; var MethodName: string);
