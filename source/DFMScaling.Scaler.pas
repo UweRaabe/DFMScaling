@@ -8,7 +8,7 @@ uses
 type
   TDfmScaling = class
   public
-    class function ScaleDown(ALines: TStrings): Boolean; static;
+    class function ScaleDown(ALines: TStrings; AClassGroup: TPersistentClass): Boolean; static;
   end;
 
 implementation
@@ -55,6 +55,7 @@ type
 type
   TDfmScaler = class
   private
+    FClassGroup: TPersistentClass;
     FEventHandler: TEventHandler;
     FInstance: TComponent;
     FLines: TStrings;
@@ -66,6 +67,7 @@ type
     procedure LoadInstance;
     function Scale: Boolean; virtual; abstract;
     procedure StoreInstance;
+    property ClassGroup: TPersistentClass read FClassGroup write FClassGroup;
     property EventHandler: TEventHandler read FEventHandler;
     property Instance: TComponent read FInstance;
     property Lines: TStrings read FLines write FLines;
@@ -133,6 +135,7 @@ begin
       text.Free;
     end;
     stream.Position := 0;
+    ActivateClassGroup(ClassGroup);
     var Reader := TReader.Create(stream, 4096);
     try
       Reader.OnFindMethodInstance := EventHandler.FindMethodInstance;
@@ -244,7 +247,7 @@ begin
   Result := True;
 end;
 
-class function TDfmScaling.ScaleDown(ALines: TStrings): Boolean;
+class function TDfmScaling.ScaleDown(ALines: TStrings; AClassGroup: TPersistentClass): Boolean;
 var
   scaler: TDfmScaler;
 begin
@@ -257,6 +260,7 @@ begin
     Exit;
   end;
   try
+    scaler.ClassGroup := AClassGroup;
     scaler.Lines := ALines;
     scaler.LoadInstance;
     if not scaler.Scale then Exit;

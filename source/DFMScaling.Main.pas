@@ -44,12 +44,14 @@ resourcestring
 type
   TFormModuleNotifier = class(TNotifierObject, IOTANotifier, IOTAModuleNotifier)
   private
+    FClassGroup: TPersistentClass;
     FFileName: string;
   public
-    constructor Create(const AFileName: string);
+    constructor Create(const AFileName: string; AClassGroup: TPersistentClass);
     procedure AfterSave;
     function CheckOverwrite: Boolean;
     procedure ModuleRenamed(const NewName: string);
+    property ClassGroup: TPersistentClass read FClassGroup;
     property FileName: string read FFileName;
   end;
 
@@ -58,10 +60,11 @@ begin
   result := True;
 end;
 
-constructor TFormModuleNotifier.Create(const AFileName: string);
+constructor TFormModuleNotifier.Create(const AFileName: string; AClassGroup: TPersistentClass);
 begin
   inherited Create;
   FFileName := AFileName;
+  FClassGroup := AClassGroup;
 end;
 
 procedure TFormModuleNotifier.ModuleRenamed(const NewName: string);
@@ -76,7 +79,7 @@ begin
   lst := TStringList.Create();
   try
     lst.LoadFromFile(FileName);
-    if not TDfmScaling.ScaleDown(lst) then Exit;
+    if not TDfmScaling.ScaleDown(lst, ClassGroup) then Exit;
     var lastWrite := TFile.GetLastWriteTime(FileName);
     lst.SaveToFile(FileName);
     TFile.SetLastWriteTime(FileName, lastWrite);
@@ -165,17 +168,17 @@ end;
 
 procedure TMagicianNotifier.CheckModule(const FileName: string);
 var
+  formEditor: IOTAFormEditor;
   module: IOTAModule;
   I: Integer;
-  modEditor: IOTAEditor;
 begin
   module := OTAModuleServices.FindModule(FileName);
   if module <> nil then begin
     for I := 0 to module.ModuleFileCount - 1 do begin
-      modEditor := module.ModuleFileEditors[I];
-      if SameText(TPath.GetExtension(modEditor.FileName), '.dfm') then begin
-        module.AddNotifier(TFormModuleNotifier.Create(modEditor.FileName));
-      end;
+      if not Supports(module.ModuleFileEditors[I], IOTAFormEditor, formEditor) then Continue;
+      if not SameText(TPath.GetExtension(formEditor.FileName), '.dfm') then Continue;
+      var designer := (formEditor as INTAFormEditor).FormDesigner;
+      module.AddNotifier(TFormModuleNotifier.Create(formEditor.FileName, designer.ActiveClassGroup));
     end;
   end;
 end;
