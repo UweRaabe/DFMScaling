@@ -8,7 +8,7 @@ uses
 type
   TDfmScaling = class
   public
-    class function ScaleDown(ALines: TStrings; AClassGroup: TPersistentClass): Boolean; static;
+    class function ScaleDown(ALines: TStrings; AClassGroup: TPersistentClass; AClassType: TClass): Boolean; static;
   end;
 
 implementation
@@ -23,7 +23,7 @@ type
   TDesignType = (Form, Frame, DataModule, Other);
 {$SCOPEDENUMS OFF}
 
-function DetectDesignType(ALines: TStrings): TDesignType;
+function DetectDesignType(ALines: TStrings): TDesignType; overload;
 begin
   Result := TDesignType.DataModule;
   for var S in ALines do begin
@@ -32,11 +32,24 @@ begin
     { abort on child components }
     if S[3] = ' ' then Break;
     var content := S.Substring(2);
-    if content.StartsWith('ClientHeight') then
+    { ClientHeight may be suppressed on inherited forms, while TextHeight is always written }
+    if content.StartsWith('TextHeight') then
       Exit(TDesignType.Form);
     if content.StartsWith('TabOrder') then
       Exit(TDesignType.Frame);
   end;
+end;
+
+function DetectDesignType(AClassType: TClass): TDesignType; overload;
+begin
+  if AClassType.InheritsFrom(TCustomForm) then
+    Result := TDesignType.Form
+  else if AClassType.InheritsFrom(TCustomFrame) then
+    Result := TDesignType.Frame
+  else if AClassType.InheritsFrom(TDataModule) then
+    Result := TDesignType.DataModule
+  else
+    Result := TDesignType.Other;
 end;
 
 type
@@ -247,12 +260,12 @@ begin
   Result := True;
 end;
 
-class function TDfmScaling.ScaleDown(ALines: TStrings; AClassGroup: TPersistentClass): Boolean;
+class function TDfmScaling.ScaleDown(ALines: TStrings; AClassGroup: TPersistentClass; AClassType: TClass): Boolean;
 var
   scaler: TDfmScaler;
 begin
   Result := False;
-  case DetectDesignType(ALines) of
+  case DetectDesignType(AClassType) of
     TDesignType.Form: scaler := TFormScaler.Create;
     TDesignType.Frame: scaler := TFrameScaler.Create;
     TDesignType.DataModule: scaler := TDataModuleScaler.Create;

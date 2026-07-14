@@ -46,13 +46,16 @@ type
   private
     FClassGroup: TPersistentClass;
     FFileName: string;
+    FRootClassType: TClass;
   public
-    constructor Create(const AFileName: string; AClassGroup: TPersistentClass);
+    constructor Create(const AFileName: string; AClassGroup: TPersistentClass;
+        ARootClassType: TClass);
     procedure AfterSave;
     function CheckOverwrite: Boolean;
     procedure ModuleRenamed(const NewName: string);
     property ClassGroup: TPersistentClass read FClassGroup;
     property FileName: string read FFileName;
+    property RootClassType: TClass read FRootClassType;
   end;
 
 function TFormModuleNotifier.CheckOverwrite: Boolean;
@@ -60,11 +63,13 @@ begin
   result := True;
 end;
 
-constructor TFormModuleNotifier.Create(const AFileName: string; AClassGroup: TPersistentClass);
+constructor TFormModuleNotifier.Create(const AFileName: string; AClassGroup:
+    TPersistentClass; ARootClassType: TClass);
 begin
   inherited Create;
   FFileName := AFileName;
   FClassGroup := AClassGroup;
+  FRootClassType := ARootClassType;
 end;
 
 procedure TFormModuleNotifier.ModuleRenamed(const NewName: string);
@@ -79,7 +84,7 @@ begin
   lst := TStringList.Create();
   try
     lst.LoadFromFile(FileName);
-    if not TDfmScaling.ScaleDown(lst, ClassGroup) then Exit;
+    if not TDfmScaling.ScaleDown(lst, ClassGroup, RootClassType) then Exit;
     var lastWrite := TFile.GetLastWriteTime(FileName);
     lst.SaveToFile(FileName);
     TFile.SetLastWriteTime(FileName, lastWrite);
@@ -178,7 +183,7 @@ begin
       if not Supports(module.ModuleFileEditors[I], IOTAFormEditor, formEditor) then Continue;
       if not SameText(TPath.GetExtension(formEditor.FileName), '.dfm') then Continue;
       var designer := (formEditor as INTAFormEditor).FormDesigner;
-      module.AddNotifier(TFormModuleNotifier.Create(formEditor.FileName, designer.ActiveClassGroup));
+      module.AddNotifier(TFormModuleNotifier.Create(formEditor.FileName, designer.ActiveClassGroup, designer.Root.ClassType));
     end;
   end;
 end;
